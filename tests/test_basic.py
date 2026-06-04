@@ -25,7 +25,7 @@ def test_date_and_slug():
 def test_minutes_path_uses_account_subfolder():
     cfg = config.load()
     p = gather.minutes_path("acme 2026.01.15.m4a", cfg)
-    assert p.parent.name == "AcmeCorp" and p.name == "AcmeCorp 2026.01.15.md"
+    assert p.parent.name == "AcmeCorp" and p.name == "acme 2026.01.15.md"
 
 
 def test_glossary_from_example_minutes():

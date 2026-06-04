@@ -11,7 +11,7 @@ AUDIO_EXTS = (".m4a", ".mp3", ".mp4", ".wav", ".aac")
 def minutes_path(audio_path, cfg=None):
     cfg = cfg or config.load()
     info = classify(audio_path, cfg)
-    title = f"{info['account']} {info['date']}" if info["date"] else info["slug"]
+    title = Path(audio_path).stem            # title = filename (customer + type + date)
     return Path(config.output_dir(cfg)) / info["account"] / f"{title}.md"
 
 

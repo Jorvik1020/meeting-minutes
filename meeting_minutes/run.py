@@ -20,7 +20,9 @@ from meeting_minutes.classify import classify
 
 
 def _title(info):
-    return f"{info['account']} {info['date']}" if info["date"] else info["slug"]
+    # Title = your audio filename (name files "Customer MeetingType YYYY.MM.DD").
+    # Falls back to account+date only if no filename title was attached.
+    return info.get("title") or (f"{info['account']} {info['date']}" if info["date"] else info["slug"])
 
 
 def _build_summary_prompt(transcript, ctx):
@@ -46,6 +48,7 @@ def _summarise_with_llm(transcript, ctx, cfg):
 def process_audio(path, cfg=None, dry_run=False):
     cfg = cfg or config.load()
     info = classify(path, cfg)
+    info["title"] = Path(path).stem          # title = your filename (customer + type + date)
     title = _title(info)
     related = gather.load_related_minutes(info["account"], cfg)
     glossary = ", ".join(kw.extract_keywords(related))

@@ -43,7 +43,7 @@ Everything is in `config.yaml` (git-ignored, so your settings stay private):
    `notebooklm.notebook_id` (the notebook to upload into). Or pick `backend: cloud|local`.
 4. **Output + accounts** — `paths.output_dir` and your `accounts` list. A filename
    keyword maps each recording to an account, and minutes are written to
-   **`<output_dir>/<account>/<account> <date>.md`** — the account sub-folder is
+   **`<output_dir>/<account>/<your-filename>.md`** — the account sub-folder is
    **created automatically**. Unmatched recordings go to `_Uncategorized/`.
 
 ## Cross-check (uses your own history)
@@ -57,7 +57,7 @@ The more you use it, the better it gets per account.
 
 Fixed, sales-meeting-oriented format (edit `meeting_minutes/notebooklm_prompt.md` to taste):
 
-- **Title** = `Account YYYY.MM.DD`
+- **Title** = your audio **filename** (name files `Customer MeetingType YYYY.MM.DD`)
 - **Attendees** — name — title, company
 - **Key points** — pain points / complaints / requirements surfaced first, then context
 - **Follow-ups** — `What | Who | When` table
