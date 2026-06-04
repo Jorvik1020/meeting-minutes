@@ -22,23 +22,35 @@ accounts:
   - name: "Initech"
     keywords: ["initech"]
 
-# Transcription/summarisation engine:
-#   notebooklm — free, no API key, handles long audio (recommended). Needs the
-#                notebooklm-py CLI + a Google login. Does transcribe+summarise.
-#   cloud      — Google Gemini API (fast; needs GEMINI_API_KEY; transcribe -> your LLM)
-#   local      — faster-whisper on your machine (private, slow; transcribe -> your LLM)
+# ── Engine: pick ONE ─────────────────────────────────────────────────────────
+#   notebooklm — PREFERRED. Free, no API key, handles long audio. NotebookLM does
+#                BOTH transcription and the minutes. Needs the notebooklm-py CLI +
+#                a Google login. (Audio is uploaded to Google.)
+#   local      — Whisper-turbo transcribes ON YOUR MACHINE, then YOUR chosen LLM
+#                writes the minutes. Private transcription; you bring an LLM key.
+#   cloud      — (advanced) Gemini API transcribes, then your LLM summarises.
 backend: "notebooklm"
 
-notebooklm:
+notebooklm:                        # backend: notebooklm
   # Path to the notebooklm-py CLI binary, and the notebook to upload into.
   binary: "~/.local/share/notebooklm/.venv/bin/notebooklm"
   notebook_id: "your-notebook-id-here"
 
-cloud:                              # only if backend: cloud
-  model: "gemini-2.5-flash"         # GEMINI_API_KEY from env / Keychain
+local:                             # backend: local
+  whisper_model: "large-v3-turbo"   # turbo (recommended) | large-v3 | medium | small
 
-local:                             # only if backend: local
-  whisper_model: "large-v3"         # large-v3 (accurate) | medium | small (fast)
+cloud:                             # backend: cloud (advanced)
+  model: "gemini-2.5-flash"         # GEMINI_API_KEY in env
+
+# The LLM that WRITES the minutes for the `local` and `cloud` backends.
+# Provider-agnostic via LiteLLM — set the model and put the matching API key in your
+# environment. Examples (model -> required env var):
+#   gpt-4o                       -> OPENAI_API_KEY
+#   claude-3-7-sonnet-latest     -> ANTHROPIC_API_KEY
+#   gemini/gemini-2.5-flash      -> GEMINI_API_KEY
+#   ollama/qwen2.5:14b           -> (local Ollama, no key)
+llm:
+  model: "gpt-4o"
 
 crosscheck:
   # (2) Use your own past minutes for the same account to correct transcription

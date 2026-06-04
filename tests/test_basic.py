@@ -32,3 +32,18 @@ def test_glossary_from_example_minutes():
     text = open("examples/AcmeCorp 2026.01.15.md", encoding="utf-8").read()
     g = kw.extract_keywords(text)
     assert "AcmeCorp" in g and any("SOC" in t for t in g)
+
+
+def test_local_backend_summary_prompt_includes_transcript_and_glossary():
+    from meeting_minutes import run
+    ctx = {"title": "AcmeCorp 2026.01.15", "account": "AcmeCorp", "date": "2026.01.15",
+           "org": "Your Company", "glossary": "AcmeCorp, SOC 2"}
+    p = run._build_summary_prompt("Jane: latency is too high.", ctx)
+    assert "Jane: latency is too high." in p and "AcmeCorp, SOC 2" in p
+    assert "{transcript}" not in p and "Your Company" in p
+
+
+def test_config_defaults_whisper_turbo():
+    cfg = config.load()
+    assert cfg["local"]["whisper_model"] == "large-v3-turbo"
+    assert "model" in cfg["llm"]

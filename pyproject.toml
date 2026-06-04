@@ -6,8 +6,8 @@ requires-python = ">=3.10"
 dependencies = ["pyyaml>=6.0"]
 
 [project.optional-dependencies]
-local = ["faster-whisper>=1.2"]
-cloud = ["google-genai>=1.0"]
+local = ["faster-whisper>=1.2", "litellm>=1.40"]
+cloud = ["google-genai>=1.0", "litellm>=1.40"]
 
 [dependency-groups]
 dev = ["pytest>=8.0"]

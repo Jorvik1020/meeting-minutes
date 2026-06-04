@@ -23,14 +23,24 @@ def _title(info):
     return f"{info['account']} {info['date']}" if info["date"] else info["slug"]
 
 
-def _summarise_with_llm(transcript, ctx):
-    """Plug your own LLM here for the cloud/local backends (NotebookLM doesn't need it).
-    By default we just wrap the transcript with the format instructions so you can
-    paste it into any chat model. Override SUMMARISER by editing this function."""
-    prompt_path = Path(__file__).parent / "notebooklm_prompt.md"
-    fmt = prompt_path.read_text(encoding="utf-8")
-    return (f"<!-- Summarise the transcript below into these minutes. -->\n{fmt}\n\n"
-            f"## Glossary\n{ctx.get('glossary','')}\n\n## Transcript\n{transcript}")
+def _build_summary_prompt(transcript, ctx):
+    fmt = (Path(__file__).parent / "prompt.md").read_text(encoding="utf-8")
+    return fmt.format(
+        title=ctx["title"], account=ctx["account"], date=ctx.get("date") or "(date unknown)",
+        org=ctx.get("org", "our company"), glossary=ctx.get("glossary") or "(none)",
+        transcript=transcript,
+    )
+
+
+def _summarise_with_llm(transcript, ctx, cfg):
+    """Summarise the transcript into minutes using the friend-configured LLM.
+    Provider-agnostic via LiteLLM (model + API key from config/env)."""
+    import litellm
+    model = (cfg.get("llm") or {}).get("model", "gpt-4o")
+    prompt = _build_summary_prompt(transcript, ctx)
+    r = litellm.completion(model=model, messages=[{"role": "user", "content": prompt}],
+                           temperature=0)
+    return r["choices"][0]["message"]["content"]
 
 
 def process_audio(path, cfg=None, dry_run=False):
@@ -45,10 +55,10 @@ def process_audio(path, cfg=None, dry_run=False):
 
     if backend == "notebooklm":
         minutes = nbm.generate_minutes(path, ctx, cfg=cfg)
-    else:
+    else:  # local (Whisper-turbo) or cloud (Gemini) transcribe -> your LLM summarises
         from meeting_minutes.transcribe import transcribe
         result = transcribe(path, backend, cfg=cfg)
-        minutes = _summarise_with_llm(result["text"], ctx)
+        minutes = _summarise_with_llm(result["text"], ctx, cfg)
 
     if dry_run:
         print(f"\n===== {title} =====\n{minutes}\n")

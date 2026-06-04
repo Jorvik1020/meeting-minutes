@@ -3,13 +3,22 @@
 Turn meeting **audio recordings** into clean, structured **minutes** — with attendees,
 key points (pain points / complaints / requirements first), and a follow-up table.
 
-Three interchangeable engines:
+## Pick your engine (`backend` in config.yaml)
 
-| Backend | What it does | Needs | Speed | Privacy |
+**1. `notebooklm` — preferred.** Free, no API key, handles long audio. NotebookLM does
+*both* the transcription and the minutes. Needs the
+[notebooklm-py](https://pypi.org/project/notebooklm-py/) CLI + a Google login.
+
+**2. `local` — Whisper-turbo + your own LLM.** `faster-whisper` (`large-v3-turbo`)
+transcribes **on your machine**, then **the LLM you configure** writes the minutes —
+any provider via LiteLLM (OpenAI / Anthropic / Gemini / local Ollama). Private
+transcription; you bring an LLM key.
+
+| Backend | Transcribe | Minutes by | Needs | Privacy |
 |---|---|---|---|---|
-| **`notebooklm`** (default) | uploads audio → NotebookLM transcribes + summarises | a Google login + [notebooklm-py](https://pypi.org/project/notebooklm-py/) | ~1–10 min | audio → Google |
-| `cloud` | Gemini transcribes → you summarise | `GEMINI_API_KEY` | ~6 min | audio → Google |
-| `local` | faster-whisper on your machine → you summarise | `faster-whisper` | slow (CPU) | 🔒 stays local |
+| **`notebooklm`** (preferred) | NotebookLM | NotebookLM | Google login + notebooklm-py | audio → Google |
+| **`local`** | Whisper-turbo (your Mac) | **your LLM** (`llm.model`) | `faster-whisper` + an LLM key | 🔒 transcription local |
+| `cloud` *(advanced)* | Gemini API | your LLM | `GEMINI_API_KEY` + an LLM key | audio → Google |
 
 ## Quick start
 
@@ -17,6 +26,7 @@ Three interchangeable engines:
 git clone <this-repo> && cd meeting-minutes
 uv sync                 # or: pip install -e .
 cp config.example.yaml config.yaml   # then edit config.yaml (see below)
+# Install extras for your backend:  uv sync --extra local   (or --extra cloud)
 python -m meeting_minutes.run --dry-run        # preview
 python -m meeting_minutes.run                   # write minutes for all new audio
 python -m meeting_minutes.run --file "~/MeetingAudio/AcmeCorp 2026.01.15.m4a"
