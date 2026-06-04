@@ -1,0 +1,17 @@
+[project]
+name = "meeting-minutes"
+version = "0.1.0"
+description = "Audio meeting recordings -> structured minutes (NotebookLM / Gemini / local Whisper)"
+requires-python = ">=3.10"
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+local = ["faster-whisper>=1.2"]
+cloud = ["google-genai>=1.0"]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

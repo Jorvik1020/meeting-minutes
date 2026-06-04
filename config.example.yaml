@@ -1,0 +1,47 @@
+# Meeting-Minutes config — copy to `config.yaml` and edit.
+# `config.yaml` is git-ignored, so your personal settings stay private.
+
+you:
+  name: "Your Name"
+  email: "you@example.com"      # used to recognise you in the attendee list
+  org: "Your Company"           # appears in the minutes prompt (the "our side")
+
+paths:
+  # (1) Local folder where your meeting audio lands (download from Drive, AirDrop, etc.)
+  audio_dir: "~/MeetingAudio"
+  # (4) Where minutes are written. A sub-folder is auto-created PER ACCOUNT.
+  output_dir: "~/MeetingMinutes"
+
+# (4) Accounts/clients. Filename keywords map a recording to an account, which
+# becomes its output sub-folder. Add your own. Unmatched -> "_Uncategorized".
+accounts:
+  - name: "AcmeCorp"
+    keywords: ["acme"]
+  - name: "Globex"
+    keywords: ["globex", "环球"]      # keywords can be in any language
+  - name: "Initech"
+    keywords: ["initech"]
+
+# Transcription/summarisation engine:
+#   notebooklm — free, no API key, handles long audio (recommended). Needs the
+#                notebooklm-py CLI + a Google login. Does transcribe+summarise.
+#   cloud      — Google Gemini API (fast; needs GEMINI_API_KEY; transcribe -> your LLM)
+#   local      — faster-whisper on your machine (private, slow; transcribe -> your LLM)
+backend: "notebooklm"
+
+notebooklm:
+  # Path to the notebooklm-py CLI binary, and the notebook to upload into.
+  binary: "~/.local/share/notebooklm/.venv/bin/notebooklm"
+  notebook_id: "your-notebook-id-here"
+
+cloud:                              # only if backend: cloud
+  model: "gemini-2.5-flash"         # GEMINI_API_KEY from env / Keychain
+
+local:                             # only if backend: local
+  whisper_model: "large-v3"         # large-v3 (accurate) | medium | small (fast)
+
+crosscheck:
+  # (2) Use your own past minutes for the same account to correct transcription
+  # typos (names, products, jargon). Reads prior .md files from output_dir/<account>/.
+  enabled: true
+  max_prior: 3                      # how many recent prior minutes to learn terms from
