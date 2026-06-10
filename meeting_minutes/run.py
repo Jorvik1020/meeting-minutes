@@ -51,7 +51,10 @@ def process_audio(path, cfg=None, dry_run=False):
     info["title"] = Path(path).stem          # title = your filename (customer + type + date)
     title = _title(info)
     related = gather.load_related_minutes(info["account"], cfg)
-    glossary = ", ".join(kw.extract_keywords(related))
+    # Curated glossary (canonical terms + known people) FIRST, then auto-extracted
+    # keywords — so hand-maintained spellings win over noisy auto-extraction.
+    glossary = ", ".join(gather.load_glossary_terms(info["account"], cfg)
+                         + kw.extract_keywords(related))
     backend = cfg.get("backend", "notebooklm")
     ctx = {"title": title, "account": info["account"], "date": info["date"],
            "org": cfg.get("you", {}).get("org", "our company"), "glossary": glossary}
