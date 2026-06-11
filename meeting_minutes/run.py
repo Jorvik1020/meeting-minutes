@@ -15,8 +15,15 @@ import argparse
 from pathlib import Path
 
 from meeting_minutes import config, gather, keywords as kw
+from meeting_minutes import notebooklm as nb
 from meeting_minutes import notebooklm_minutes as nbm
 from meeting_minutes.classify import classify
+
+# Try NotebookLM this many times (refreshing auth between tries) before falling back
+# to the local backend. Each try polls for up to NBLM_POLL_TIMEOUT seconds while the
+# source indexes server-side.
+NBLM_TRIES = 3
+NBLM_POLL_TIMEOUT = 300
 
 
 def _title(info):
@@ -59,9 +66,32 @@ def process_audio(path, cfg=None, dry_run=False):
     ctx = {"title": title, "account": info["account"], "date": info["date"],
            "org": cfg.get("you", {}).get("org", "our company"), "glossary": glossary}
 
+    def _local_minutes():
+        from meeting_minutes.transcribe import transcribe
+        result = transcribe(path, "local", cfg=cfg)
+        return _summarise_with_llm(result["text"], ctx, cfg)
+
     if backend == "notebooklm":
-        minutes = nbm.generate_minutes(path, ctx, cfg=cfg)
-    else:  # local (Whisper-turbo) or cloud (Gemini) transcribe -> your LLM summarises
+        # Try NotebookLM up to NBLM_TRIES times (refreshing auth between tries) before
+        # falling back to local. generate_minutes raises on an ungrounded/empty reply,
+        # so a transient indexing/auth failure is retried rather than written as minutes.
+        minutes = None
+        for attempt in range(1, NBLM_TRIES + 1):
+            try:
+                minutes = nbm.generate_minutes(path, ctx, cfg=cfg,
+                                               poll_timeout=NBLM_POLL_TIMEOUT)
+                break
+            except Exception as e:  # noqa: BLE001 - retry, then local fallback
+                print(f"NotebookLM attempt {attempt}/{NBLM_TRIES} failed ({e}).",
+                      file=sys.stderr)
+                if attempt < NBLM_TRIES:
+                    nb.login_refresh(cfg=cfg)
+        if minutes is None:
+            print("NotebookLM failed; falling back to the local backend.", file=sys.stderr)
+            minutes = _local_minutes()
+    elif backend == "local":
+        minutes = _local_minutes()
+    else:  # cloud (Gemini) transcribe -> your LLM summarises
         from meeting_minutes.transcribe import transcribe
         result = transcribe(path, backend, cfg=cfg)
         minutes = _summarise_with_llm(result["text"], ctx, cfg)
@@ -79,6 +109,18 @@ def process_audio(path, cfg=None, dry_run=False):
 
 def run_job(file=None, dry_run=False, cfg=None):
     cfg = cfg or config.load()
+    # NotebookLM preflight: a stored session cookie can be EXPIRED yet still "present"
+    # on disk (so `notebooklm doctor` reports OK), while every real call redirects to
+    # Google sign-in. Verify with a real call; if auth is dead, warn with the fix and
+    # fall back to local for this run — never upload audio that can't index.
+    if cfg.get("backend", "notebooklm") == "notebooklm":
+        nb.login_refresh(cfg=cfg)             # cheap: re-pull live browser cookies
+        if not nb.auth_ok(cfg=cfg):
+            print("WARNING: NotebookLM auth is expired/invalid. Fix: open Chrome -> "
+                  "notebooklm.google.com -> sign in, then "
+                  "`notebooklm login --browser-cookies chrome`. Falling back to the "
+                  "local backend for this run.", file=sys.stderr)
+            cfg = {**cfg, "backend": "local"}
     audios = [os.path.expanduser(file)] if file else gather.scan_new_audio(cfg)
     if not audios:
         print("No new audio.")

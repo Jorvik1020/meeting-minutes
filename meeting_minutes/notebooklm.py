@@ -11,7 +11,9 @@ import subprocess
 from meeting_minutes import config
 
 _AUTH = ("authentication expired", "auth required", "401 unauthorized",
-         "please log in", "not authenticated", "invalid_grant")
+         "please log in", "not authenticated", "invalid_grant",
+         "authentication expired or invalid", "redirected to",
+         "re-authenticate", "accounts.google.com", "weblitesignin")
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
 _CIT = re.compile(r"\s*\[\d+\]")
 
@@ -46,6 +48,23 @@ def _run(args, runner=_default_runner, cfg=None):
     return r
 
 
+def auth_ok(runner=_default_runner, cfg=None):
+    """True iff NotebookLM accepts the current session for a REAL API call.
+
+    `notebooklm doctor` only checks that a session cookie exists on disk — but an
+    EXPIRED cookie still passes that while every real call redirects to Google
+    sign-in. So we make an actual read (`list`) and look for the sign-in/redirect
+    markers. Use this as a preflight so the job fails fast (warn + local fallback)
+    instead of uploading audio that can never index and writing an ungrounded
+    apology to the minutes file. Fix on failure: open Chrome -> notebooklm.google.com
+    -> sign in, then `notebooklm login --browser-cookies chrome`."""
+    r = runner([_bin(cfg), "list"])
+    if getattr(r, "returncode", 0) != 0:
+        return False
+    blob = (_out(r) + (getattr(r, "stderr", "") or "")).lower()
+    return not any(m in blob for m in _AUTH)
+
+
 def source_add(path, runner=_default_runner, cfg=None):
     r = _run(["source", "add", path, "-n", _nb(cfg), "--type", "file",
               "--mime-type", "audio/mp4", "--json"], runner=runner, cfg=cfg)
@@ -70,6 +89,40 @@ def source_wait(src_id, runner=_default_runner, cfg=None, timeout=900):
 
 def _is_ready(row):
     return row.get("status") == "ready" or row.get("status_id") == 2
+
+
+def source_status(src_id, runner=_default_runner, cfg=None):
+    """Return 'ready' for an indexed source, else its raw status (e.g. 'preparing'),
+    or None if the id isn't found. The CLI's `source wait` is unreliable for audio,
+    so we read the status directly from `source list`."""
+    out = _out(_run(["source", "list", "-n", _nb(cfg), "--json"],
+                    runner=runner, cfg=cfg)).strip()
+    try:
+        d = json.loads(out)
+    except (ValueError, TypeError):
+        return None
+    rows = d.get("sources", d) if isinstance(d, dict) else d
+    for r in (rows or []):
+        if isinstance(r, dict) and (r.get("id") or r.get("source_id")) == src_id:
+            return "ready" if _is_ready(r) else (r.get("status") or "unknown")
+    return None
+
+
+def wait_source_ready(src_id, runner=_default_runner, cfg=None,
+                      timeout=900, poll_every=30, _sleep=None):
+    """Poll `source list` until the source is ready. True iff ready within timeout.
+    More reliable for audio than the CLI's `source wait` (which can return before
+    transcription completes)."""
+    import time as _t
+    sleep = _sleep or _t.sleep
+    waited = 0
+    while True:
+        if source_status(src_id, runner=runner, cfg=cfg) == "ready":
+            return True
+        if waited >= timeout:
+            return False
+        sleep(poll_every)
+        waited += poll_every
 
 
 def find_source_by_title(title, runner=_default_runner, cfg=None):
