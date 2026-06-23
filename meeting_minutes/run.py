@@ -17,6 +17,7 @@ from pathlib import Path
 from meeting_minutes import config, gather, keywords as kw
 from meeting_minutes import notebooklm as nb
 from meeting_minutes import notebooklm_minutes as nbm
+from meeting_minutes import notebooklm_scan as nbscan
 from meeting_minutes.classify import classify
 
 # Try NotebookLM this many times (refreshing auth between tries) before falling back
@@ -107,6 +108,34 @@ def process_audio(path, cfg=None, dry_run=False):
     return str(out)
 
 
+def process_notebooklm_source(src, cfg=None, dry_run=False):
+    """Generate minutes from an EXISTING NotebookLM source — audio uploaded straight into
+    the web UI (not via the audio folder). `src` = {notebook_id, source_id, title, stem}
+    from notebooklm_scan.scan_unminuted()."""
+    cfg = cfg or config.load()
+    info = classify(src["title"], cfg)
+    info["title"] = src["stem"]
+    title = _title(info)
+    related = gather.load_related_minutes(info["account"], cfg)
+    glossary = ", ".join(gather.load_glossary_terms(info["account"], cfg)
+                         + kw.extract_keywords(related))
+    ctx = {"title": title, "account": info["account"], "date": info["date"],
+           "org": cfg.get("you", {}).get("org", "our company"), "glossary": glossary}
+    # Target the source's own notebook (it lives in a scan notebook, not the default).
+    cfg2 = nbscan._cfg_for(cfg, src["notebook_id"])
+    minutes = nbm.generate_minutes(src["title"], ctx, cfg=cfg2, source_id=src["source_id"],
+                                   poll_timeout=NBLM_POLL_TIMEOUT)
+    if dry_run:
+        print(f"\n===== {title} (NotebookLM direct) =====\n{minutes}\n")
+        return None
+    folder = Path(config.output_dir(cfg)) / info["account"]
+    folder.mkdir(parents=True, exist_ok=True)
+    out = folder / f"{title}.md"
+    out.write_text(minutes, encoding="utf-8")
+    print(f"Wrote {out} (from direct NotebookLM upload)")
+    return str(out)
+
+
 def run_job(file=None, dry_run=False, cfg=None):
     cfg = cfg or config.load()
     # NotebookLM preflight: a stored session cookie can be EXPIRED yet still "present"
@@ -122,11 +151,24 @@ def run_job(file=None, dry_run=False, cfg=None):
                   "local backend for this run.", file=sys.stderr)
             cfg = {**cfg, "backend": "local"}
     audios = [os.path.expanduser(file)] if file else gather.scan_new_audio(cfg)
-    if not audios:
+    # Optional checkpoint: audio uploaded directly into a NotebookLM notebook (web UI).
+    # Only when the notebooklm backend is live and we're not targeting a single --file.
+    nb_sources = []
+    if not file and cfg.get("backend", "notebooklm") == "notebooklm":
+        try:
+            nb_sources = nbscan.scan_unminuted(cfg)
+        except Exception as e:  # noqa: BLE001 - scan is best-effort, never blocks audio
+            print(f"NotebookLM direct-upload scan skipped ({e}).", file=sys.stderr)
+    if not audios and not nb_sources:
         print("No new audio.")
         return 0
     for a in audios:
         process_audio(a, cfg=cfg, dry_run=dry_run)
+    for s in nb_sources:
+        try:
+            process_notebooklm_source(s, cfg=cfg, dry_run=dry_run)
+        except Exception as e:  # noqa: BLE001 - one bad source must not kill the batch
+            print(f"NB source {s['stem']} failed ({e}).", file=sys.stderr)
     return 0
 
 

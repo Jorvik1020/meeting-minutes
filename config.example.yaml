@@ -35,6 +35,11 @@ notebooklm:                        # backend: notebooklm
   # Path to the notebooklm-py CLI binary, and the notebook to upload into.
   binary: "~/.local/share/notebooklm/.venv/bin/notebooklm"
   notebook_id: "your-notebook-id-here"
+  # OPTIONAL: also generate minutes from audio you upload DIRECTLY into the NotebookLM
+  # web UI (not via the audio folder). List the notebook id(s) to scan; each ready,
+  # recent, not-yet-minuted audio source is grounded into minutes (no re-upload).
+  # Leave empty ([]) to disable.
+  scan_notebook_ids: []
 
 local:                             # backend: local
   whisper_model: "large-v3-turbo"   # turbo (recommended) | large-v3 | medium | small

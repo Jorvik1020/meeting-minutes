@@ -41,6 +41,9 @@ Everything is in `config.yaml` (git-ignored, so your settings stay private):
    Google Drive, AirDrop, etc.). The tool only processes **recent + not-yet-done** files.
 3. **NotebookLM** — `notebooklm.binary` (path to the notebooklm-py CLI) and
    `notebooklm.notebook_id` (the notebook to upload into). Or pick `backend: cloud|local`.
+   Optional `notebooklm.scan_notebook_ids: [id, …]` also generates minutes from audio you
+   upload **directly into the NotebookLM web UI** (ready + recent + not-yet-minuted sources
+   are grounded from the existing source — no re-upload). Empty list = off.
 4. **Output + accounts** — `paths.output_dir` and your `accounts` list. A filename
    keyword maps each recording to an account, and minutes are written to
    **`<output_dir>/<account>/<your-filename>.md`** — the account sub-folder is

@@ -25,6 +25,7 @@ def load(path=None):
     cfg["paths"]["output_dir"] = _expand(cfg["paths"].get("output_dir", "~/MeetingMinutes"))
     nb = cfg.setdefault("notebooklm", {})
     nb["binary"] = _expand(nb.get("binary", ""))
+    nb.setdefault("scan_notebook_ids", [])      # direct-upload scan (off by default)
     if path is None:
         _CFG = cfg
     return cfg

@@ -91,6 +91,18 @@ def _is_ready(row):
     return row.get("status") == "ready" or row.get("status_id") == 2
 
 
+def list_sources(runner=_default_runner, cfg=None):
+    """All source rows (dicts) in the configured notebook, or [] on parse failure.
+    Pass a cfg whose notebook_id is the notebook you want to scan."""
+    out = _out(_run(["source", "list", "-n", _nb(cfg), "--json"], runner=runner, cfg=cfg)).strip()
+    try:
+        d = json.loads(out)
+    except (ValueError, TypeError):
+        return []
+    rows = d.get("sources", d) if isinstance(d, dict) else d
+    return [r for r in (rows or []) if isinstance(r, dict)]
+
+
 def source_status(src_id, runner=_default_runner, cfg=None):
     """Return 'ready' for an indexed source, else its raw status (e.g. 'preparing'),
     or None if the id isn't found. The CLI's `source wait` is unreliable for audio,
