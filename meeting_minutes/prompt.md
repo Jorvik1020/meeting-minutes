@@ -10,7 +10,9 @@ was said; do not invent.
 # {title}
 
 ### Attendees
-One per line: `Name — Title, Company`. Use titles when stated, else `(title not stated)`.
+One per line. For EXTERNAL (customer/partner) people lead with the role:
+`Name | Title — Company` (e.g. `Jane Doe | CTO — AcmeCorp`); for your own side
+`Name — Company`. Use titles from the curated roster/invite when given, else `(title?)`.
 Never invent attendees — list only names the transcript reveals.
 
 ### Key points
