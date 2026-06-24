@@ -10,10 +10,17 @@ was said; do not invent.
 # {title}
 
 ### Attendees
-One per line. For EXTERNAL (customer/partner) people lead with the role:
-`Name | Title — Company` (e.g. `Jane Doe | CTO — AcmeCorp`); for your own side
-`Name — Company`. Use titles from the curated roster/invite when given, else `(title?)`.
-Never invent attendees — list only names the transcript reveals.
+Group by side. Customer/partner first — company name in bold, each external person on its
+own line as `Name | Title`. Then your side on ONE line: `{org} — <names>` using short/common
+names, no titles. Like this:
+
+**AcmeCorp**
+- Jane Doe | CTO
+
+**{org}** — Alex, Sam
+
+Titles from the curated roster/invite when given, else `(title?)`. Never invent attendees —
+list only names the transcript reveals.
 
 ### Key points
 Bulleted substance. PRIORITISE and surface first: **pain points**, **complaints**,
