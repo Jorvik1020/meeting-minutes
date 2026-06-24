@@ -15,7 +15,7 @@ _AUTH = ("authentication expired", "auth required", "401 unauthorized",
          "authentication expired or invalid", "redirected to",
          "re-authenticate", "accounts.google.com", "weblitesignin")
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
-_CIT = re.compile(r"\s*\[\d+\]")
+_CIT = re.compile(r"\s*\[\d+(?:\s*[-,]\s*\d+)*\]")  # [3] · [2, 3] · [7-9] · [1, 2, 3]
 
 
 def _bin(cfg=None):
